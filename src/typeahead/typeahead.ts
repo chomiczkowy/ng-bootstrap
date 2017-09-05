@@ -1,4 +1,4 @@
-import {
+﻿import {
   ComponentFactoryResolver,
   ComponentRef,
   Directive,
@@ -29,7 +29,7 @@ import {PopupService} from '../util/popup';
 import {toString, isDefined} from '../util/util';
 import {NgbTypeaheadConfig} from './typeahead-config';
 
-enum Key {
+export enum Key {
   Tab = 9,
   Enter = 13,
   Escape = 27,
@@ -56,6 +56,17 @@ export interface NgbTypeaheadSelectItemEvent {
    * Function that will prevent item selection if called
    */
   preventDefault: () => void;
+}
+
+
+/**
+ * Payload of the mainKeyDown event.
+ */
+export interface NgbTypeaheadMainKeyDownEvent {
+  /**
+   * Key pressed
+   */
+  key: Key;
 }
 
 let nextWindowId = 0;
@@ -141,6 +152,12 @@ export class NgbTypeahead implements ControlValueAccessor,
    */
   @Output() selectItem = new EventEmitter<NgbTypeaheadSelectItemEvent>();
 
+  /**
+   * An event emitted when a one of main keys is pressed (Tab/ESC/Enter). Event payload is of type
+   * NgbTypeaheadMainKeyDownEvent.
+   */
+  @Output() mainKeyDown = new EventEmitter<NgbTypeaheadMainKeyDownEvent>();
+
   activeDescendant: string;
   popupId = `ngb-typeahead-${nextWindowId++}`;
 
@@ -220,11 +237,13 @@ export class NgbTypeahead implements ControlValueAccessor,
   }
 
   handleKeyDown(event: KeyboardEvent) {
+    let key = Key[toString(event.which)];
     if (!this.isPopupOpen()) {
+      this.mainKeyDown.emit({key: key});
       return;
     }
 
-    if (Key[toString(event.which)]) {
+    if (key) {
       switch (event.which) {
         case Key.ArrowDown:
           event.preventDefault();
@@ -245,11 +264,13 @@ export class NgbTypeahead implements ControlValueAccessor,
             this._selectResult(result);
           }
           this._closePopup();
+          this.mainKeyDown.emit({key: key});
           break;
         case Key.Escape:
           event.preventDefault();
           this._resubscribeTypeahead.next(null);
           this.dismissPopup();
+          this.mainKeyDown.emit({key: key});
           break;
       }
     }
